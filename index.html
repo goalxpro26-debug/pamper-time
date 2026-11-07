@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pamper Time: Relaxing Minis</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{background:#2b1f3d;font-family:"Trebuchet MS","Segoe UI",Verdana,sans-serif;display:flex;justify-content:center;min-height:100vh;color:#4a2c5a;overflow-x:hidden}
+  #wrap{position:relative;width:100%;max-width:480px;background:#fff7f0}
+  canvas{display:block;width:100%;height:auto;touch-action:none;cursor:pointer}
+  .btn{position:absolute;left:50%;transform:translateX(-50%);border:none;border-radius:999px;padding:13px 30px;font-size:18px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.18);transition:transform .08s}
+  .btn:active{transform:translateX(-50%) scale(.96)}
+  .btn-pink{background:#ff8fb3;color:#fff}
+  .btn-cream{background:#fff;color:#c05a8a;border:2px solid #ffb3c8}
+  .btn-teal{background:#5ec8c0;color:#fff}
+  .icon-btn{position:absolute;top:10px;width:44px;height:44px;border-radius:50%;border:none;font-size:20px;cursor:pointer;background:rgba(255,255,255,.92);box-shadow:0 2px 6px rgba(0,0,0,.2);z-index:5;line-height:1}
+  #btn-mute{right:10px}
+  #btn-pause{right:62px}
+  #btn-home{left:10px}
+  .hidden{display:none!important}
+  #howto{position:absolute;inset:0;background:rgba(43,31,61,.72);display:flex;align-items:center;justify-content:center;z-index:20;padding:20px}
+  #howto .card{background:#fffdf8;border-radius:22px;padding:22px;max-width:400px;line-height:1.55;font-size:15px;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+  #howto h2{color:#c05a8a;margin-bottom:8px}
+  #howto p{margin-bottom:8px}
+  #levels{position:absolute;inset:0;background:#fff7f0;z-index:15;overflow-y:auto;padding:14px}
+  #levels h2{text-align:center;color:#c05a8a;margin:8px 0 4px}
+  #levels .sub{text-align:center;font-size:13px;color:#8a6a8a;margin-bottom:12px}
+  #levels .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding-bottom:70px}
+  .lv{border:2px solid #ffd0de;background:#fff;border-radius:16px;padding:10px 4px;text-align:center;cursor:pointer;font-family:inherit}
+  .lv .n{font-size:22px;font-weight:800;color:#c05a8a}
+  .lv .t{font-size:10px;line-height:1.25;color:#7a5578;min-height:26px}
+  .lv .s{font-size:13px;color:#f5a623;letter-spacing:1px}
+  .lv.locked{opacity:.45;cursor:not-allowed}
+  .lv.done{border-color:#8fd8c8;background:#eafaf5}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="480" height="800"></canvas>
+  <button id="btn-home" class="icon-btn hidden" title="Home">⌂</button>
+  <button id="btn-pause" class="icon-btn hidden" title="Pause">II</button>
+  <button id="btn-mute" class="icon-btn" title="Mute / unmute">♪</button>
+
+  <button id="btn-start" class="btn btn-pink hidden" style="top:560px">▶&nbsp; Start Pampering</button>
+  <button id="btn-how" class="btn btn-cream hidden" style="top:628px">How to Play</button>
+  <button id="btn-levels-open" class="btn btn-teal hidden" style="top:696px">Choose a Mini</button>
+
+  <button id="btn-next" class="btn btn-pink hidden" style="top:620px">Next Mini →</button>
+  <button id="btn-replay" class="btn btn-cream hidden" style="top:688px">↻ Replay</button>
+  <button id="btn-again" class="btn btn-pink hidden" style="top:620px">↻ Play Again</button>
+  <button id="btn-win-home" class="btn btn-cream hidden" style="top:688px">⌂ Home</button>
+  <button id="btn-resume" class="btn btn-pink hidden" style="top:420px">▶ Resume</button>
+  <button id="btn-pause-home" class="btn btn-cream hidden" style="top:490px">⌂ Quit to Home</button>
+
+  <div id="howto" class="hidden"><div class="card">
+    <h2>How to Play</h2>
+    <p><b>Pamper Time</b> is 20 gentle mini-games — skincare, make-up, tidying and pet care. There is <b>no timer and no way to lose</b>. Relax and finish each mini at your own pace.</p>
+    <p>🫧 <b>Clean / Wash:</b> drag your finger or mouse over every bubble, speck or tangle.</p>
+    <p>👆 <b>Tap:</b> tap every glowing dot, drop or bubble.</p>
+    <p>✋ <b>Drag &amp; place:</b> drag each item onto its matching outline.</p>
+    <p>🔢 <b>In order:</b> tap the numbered steps 1 → 2 → 3…</p>
+    <p>🎨 <b>Paint:</b> drag to paint the whole area until it sparkles.</p>
+    <p>Finish a mini to earn up to 3 stars. A wrong tap just wobbles — nothing is lost. Use the ♪ button for sound and II to pause.</p>
+    <p style="text-align:center"><button id="btn-how-close" class="btn btn-pink" style="position:static;transform:none">Got it!</button></p>
+  </div></div>
+
+  <div id="levels" class="hidden">
+    <h2>Choose a Mini</h2><div class="sub">Tap an unlocked mini — finish one to unlock the next.</div>
+    <div class="grid" id="levels-grid"></div>
+    <button id="btn-levels-close" class="btn btn-pink" style="top:auto;bottom:16px">← Back</button>
+  </div>
+</div>
+<script>
+"use strict";
+/* Pamper Time: Relaxing Minis — original game. All art is drawn procedurally
+   on canvas; all sound is synthesized with WebAudio. No external assets. */
+const W=480,H=800;
+const cv=document.getElementById('game'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v))}
+function dist(x1,y1,x2,y2){return Math.hypot(x1-x2,y1-y2)}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function star(x,y,r,fill){ctx.save();ctx.translate(x,y);ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rad=i%2?r*0.45:r;ctx[i?'lineTo':'moveTo'](Math.cos(a)*rad,Math.sin(a)*rad)}ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.restore()}
+function circle(x,y,r,fill,stroke){ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=2;ctx.stroke()}}
+
+/* ---------------- Audio: gentle synthesized SFX + original music ---------------- */
+let AC=null,muted=false,musicTimer=null,musicStep=0;
+function audio(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
+function tone(f,d,type,vol,when,slideTo){const ac=audio();if(!ac||muted)return;const t=when||ac.currentTime;const o=ac.createOscillator(),g=ac.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(slideTo)o.frequency.exponentialRampToValueAtTime(slideTo,t+d);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol||0.12,t+0.02);g.gain.exponentialRampToValueAtTime(0.0001,t+d);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+d+0.05)}
+function sfx(kind){if(muted)return;if(kind==='pop'){tone(620,0.12,'sine',0.14,0,940)}else if(kind==='sparkle'){tone(880,0.15,'sine',0.1);tone(1320,0.2,'sine',0.08,AC?AC.currentTime+0.06:0)}else if(kind==='swoosh'){tone(300,0.18,'triangle',0.08,0,700)}else if(kind==='wrong'){tone(220,0.15,'sine',0.06,0,180)}else if(kind==='place'){tone(520,0.12,'triangle',0.12);tone(780,0.18,'sine',0.1,AC?AC.currentTime+0.07:0)}else if(kind==='chime'){[523,659,784,1047].forEach((f,i)=>tone(f,0.35,'sine',0.09,AC?AC.currentTime+i*0.09:0))}else if(kind==='paint'){tone(500+Math.random()*300,0.08,'sine',0.05)}}
+const MELODY=[523,587,659,784,880,784,659,587,523,440,523,659,587,523,440,392,523,587,659,784,659,587,523,587,659,587,523,0,440,523];
+function startMusic(){if(musicTimer||muted)return;audio();musicTimer=setInterval(()=>{if(muted)return;const n=MELODY[musicStep%MELODY.length];musicStep++;if(n)tone(n,0.5,'sine',0.035);if(musicStep%8===0)tone(262,0.9,'triangle',0.02)},340)}
+function stopMusic(){if(musicTimer){clearInterval(musicTimer);musicTimer=null}}
+
+/* ---------------- Level definitions ---------------- */
+/* mode: tap | clean | drag | order | paint. scene: face | pet | room | nails */
+const LEVELS=[
+ {name:"Gentle Face Wash",sub:"Drag over every bubble to wash Momo's face",mode:"clean",scene:"face",count:12,theme:["#bdeef2","#ffe3ee","#4db6c9"]},
+ {name:"Moisturiser Dots",sub:"Tap every cream dot to pat it in",mode:"tap",scene:"face",count:10,theme:["#ffe9f3","#e3f6ff","#e58bb0"]},
+ {name:"Sheet Mask",sub:"Drag each mask piece onto the face",mode:"drag",scene:"face",count:3,theme:["#e8f7e3","#fff3d6","#7cc98a"]},
+ {name:"Lip Care",sub:"Paint the lips soft and rosy",mode:"paint",scene:"face",count:1,theme:["#ffe3e3","#ffd9ec","#e56b8c"]},
+ {name:"Blush Time",sub:"Paint both cheeks a gentle pink",mode:"paint",scene:"face",count:1,theme:["#fff0e0","#ffe3ee","#f2a0b8"]},
+ {name:"Nail Polish",sub:"Paint all five nails pretty pink",mode:"paint",scene:"nails",count:1,theme:["#f3e8ff","#ffe3f3","#b678e0"]},
+ {name:"Eye Sparkle",sub:"Tap the stars in order 1 → 2 → 3 → 4 → 5",mode:"order",scene:"face",count:5,theme:["#e3ecff","#fff3d6","#7a9be0"]},
+ {name:"Hair Brushing",sub:"Drag the brush over every tangle",mode:"clean",scene:"face",count:14,theme:["#fff3d6","#ffe3ee","#d9a05b"]},
+ {name:"Pretty Hair Bow",sub:"Drag the bow onto Momo's hair",mode:"drag",scene:"face",count:1,theme:["#ffe3ee","#e3f6ff","#e58bb0"]},
+ {name:"Tidy the Vanity",sub:"Drag each bottle back to its shelf spot",mode:"drag",scene:"room",count:5,theme:["#e8f7e3","#fff3d6","#7cc98a"]},
+ {name:"Fold the Towels",sub:"Drag each towel onto the shelf",mode:"drag",scene:"room",count:4,theme:["#e3f6ff","#ffe9f3","#4db6c9"]},
+ {name:"Dust the Shelf",sub:"Drag over every speck of dust",mode:"clean",scene:"room",count:16,theme:["#fff3d6","#f3e8ff","#c9a05b"]},
+ {name:"Sort the Drawer",sub:"Drag each item to the matching basket",mode:"drag",scene:"room",count:6,theme:["#f3e8ff","#e8f7e3","#b678e0"]},
+ {name:"Water the Plant",sub:"Tap every water drop to water the plant",mode:"tap",scene:"room",count:8,theme:["#e8f7e3","#e3f6ff","#5aa86e"]},
+ {name:"Biscuit's Snack",sub:"Drag each biscuit to Biscuit the puppy",mode:"drag",scene:"pet",count:3,theme:["#fff3d6","#ffe3ee","#d9a05b"]},
+ {name:"Brush Biscuit",sub:"Drag over every tuft of loose fur",mode:"clean",scene:"pet",count:16,theme:["#ffe9f3","#fff3d6","#e58bb0"]},
+ {name:"Puppy Bath Bubbles",sub:"Tap every bubble in the bath",mode:"tap",scene:"pet",count:12,theme:["#bdeef2","#e3ecff","#4db6c9"]},
+ {name:"Treats in Order",sub:"Give the treats in order 1 → 2 → 3 → 4 → 5 → 6",mode:"order",scene:"pet",count:6,theme:["#fff3d6","#e8f7e3","#d9a05b"]},
+ {name:"Tuck-In Time",sub:"Drag the blanket, pillow and toy to the bed",mode:"drag",scene:"pet",count:3,theme:["#e3ecff","#f3e8ff","#7a9be0"]},
+ {name:"Spa Finale",sub:"Paint the whole spa glow, then tap the sparkles",mode:"paint",scene:"face",count:1,theme:["#ffe3f3","#e3f6ff","#e58bb0"]},
+];
+const ITEM_LABELS={bottle:"Bottle",brush:"Brush",towel:"Towel",toy:"Toy",biscuit:"Biscuit",blanket:"Blanket",pillow:"Pillow",mask:"Mask",bow:"Bow",sock:"Sock",cream:"Cream",comb:"Comb"};
+const DRAG_SETS=[
+ null,null,
+ [{label:"Mask",color:"#bfe8c9",tx:240,ty:330},{label:"Mask",color:"#bfe8c9",tx:240,ty:330},{label:"Mask",color:"#bfe8c9",tx:240,ty:330}],
+ null,null,null,null,null,
+ [{label:"Bow",color:"#ff8fb3",tx:240,ty:205}],
+ [{label:"Bottle",color:"#ffb3c8",tx:110,ty:300},{label:"Brush",color:"#8fd8c8",tx:170,ty:300},{label:"Cream",color:"#ffd9a0",tx:230,ty:300},{label:"Comb",color:"#b678e0",tx:290,ty:300},{label:"Bottle",color:"#7a9be0",tx:350,ty:300}],
+ [{label:"Towel",color:"#8fd8c8",tx:140,ty:300},{label:"Towel",color:"#ffb3c8",tx:200,ty:300},{label:"Towel",color:"#ffd9a0",tx:260,ty:300},{label:"Towel",color:"#b678e0",tx:320,ty:300}],
+ null,
+ [{label:"Sock",color:"#ffb3c8",tx:150,ty:520,bin:"Pink"},{label:"Toy",color:"#8fd8c8",tx:330,ty:520,bin:"Blue"},{label:"Sock",color:"#ff9db3",tx:150,ty:520,bin:"Pink"},{label:"Toy",color:"#7ec8d8",tx:330,ty:520,bin:"Blue"},{label:"Sock",color:"#ffc2d4",tx:150,ty:520,bin:"Pink"},{label:"Toy",color:"#5ec8c0",tx:330,ty:520,bin:"Blue"}],
+ null,
+ [{label:"Biscuit",color:"#d9a05b",tx:240,ty:430},{label:"Biscuit",color:"#d9a05b",tx:240,ty:430},{label:"Biscuit",color:"#d9a05b",tx:240,ty:430}],
+ null,null,null,
+ [{label:"Blanket",color:"#b678e0",tx:240,ty:470},{label:"Pillow",color:"#fff",tx:170,ty:450},{label:"Toy",color:"#ff8fb3",tx:310,ty:450}],
+ null];
+
+/* ---------------- State ---------------- */
+let screen='menu',levelIdx=0,items=[],paintCells=[],paintDone=0,paintTotal=1,paintRect=null;
+let done=0,total=1,mistakes=0,starsEarned=0,score=0,totalStars=0,unlocked=1;
+let starsByLevel={},dragItem=null,dragging=false,pointer={x:0,y:0,down:false},shakeT=0,startT=0,elapsed=0;
+let levelStartScore=0,clearStars=0,winShown=false,paintComplete=false;
+try{const s=JSON.parse(localStorage.getItem('pamper-time-save')||'{}');starsByLevel=s.stars||{};unlocked=s.unlocked||1;totalStars=Object.values(starsByLevel).reduce((a,b)=>a+b,0)}catch(e){}
+function save(){try{localStorage.setItem('pamper-time-save',JSON.stringify({stars:starsByLevel,unlocked}))}catch(e){}}
+
+function setupLevel(i){
+  levelIdx=i;const L=LEVELS[i],rnd=mulberry32(i*991+7);items=[];paintCells=[];paintDone=0;mistakes=0;dragItem=null;paintComplete=false;startT=Date.now();
+  const cx=240,cy=L.scene==='room'?330:340;
+  if(L.mode==='tap'||L.mode==='clean'){
+    for(let k=0;k<L.count;k++){
+      let x,y,tries=0;
+      do{x=cx+(rnd()-0.5)*260;y=cy+(rnd()-0.5)*(L.scene==='room'?240:280);tries++}while(tries<40&&items.some(it=>dist(it.x,it.y,x,y)<52));
+      items.push({x,y,r:L.mode==='clean'?24:26,done:false,kind:L.mode==='clean'?'speck':'dot',n:k+1});
+    }
+    total=items.length;
+  }else if(L.mode==='order'){
+    for(let k=0;k<L.count;k++){const a=-Math.PI/2+k*(Math.PI*2/L.count);items.push({x:cx+Math.cos(a)*120,y:cy+Math.sin(a)*110,r:30,done:false,kind:'star',n:k+1})}
+    total=items.length;
+  }else if(L.mode==='drag'){
+    const set=DRAG_SETS[i]||[{label:"Item",color:"#ff8fb3",tx:240,ty:330}];
+    set.forEach((s,k)=>{items.push({x:90+k*100,y:640,r:34,done:false,kind:'drag',label:s.label,color:s.color,tx:s.tx,ty:s.ty,bin:s.bin||null,ox:90+k*100,oy:640})});
+    // spread bottom row evenly
+    items.forEach((it,k)=>{it.x=70+k*(340/Math.max(1,items.length-1||1));it.ox=it.x;it.oy=650});
+    total=items.length;
+  }else if(L.mode==='paint'){
+    if(L.scene==='nails'){paintRect={x:110,y:250,w:260,h:260}}
+    else if(i===3){paintRect={x:195,y:420,w:90,h:34}}
+    else if(i===4){paintRect={x:120,y:330,w:240,h:130}}
+    else{paintRect={x:110,y:230,w:260,h:280}}
+    const cols=13,rows=11;paintTotal=cols*rows;
+    for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)paintCells.push({x:paintRect.x+(c+0.5)*paintRect.w/cols,y:paintRect.y+(r+0.5)*paintRect.h/rows,done:false});
+    total=paintTotal;
+    if(i===19){for(let k=0;k<6;k++)items.push({x:120+k*48,y:560,r:20,done:false,kind:'sparkle',n:k+1})}
+  }
+  done=0;
+}
+function levelComplete(){
+  elapsed=(Date.now()-startT)/1000;
+  clearStars=mistakes===0?3:(mistakes<=2?2:1);
+  starsByLevel[levelIdx+1]=Math.max(starsByLevel[levelIdx+1]||0,clearStars);
+  totalStars=Object.values(starsByLevel).reduce((a,b)=>a+b,0);
+  score+=clearStars*50+100;
+  unlocked=Math.max(unlocked,Math.min(20,levelIdx+2));save();
+  screen=levelIdx===19?'win':'clear';sfx('chime');updateButtons();
+}
+function checkDone(){if(done>=total)levelComplete()}
+
+/* ---------------- Input ---------------- */
+function toLogical(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:(t.clientX-r.left)/r.width*W,y:(t.clientY-r.top)/r.height*H}}
+let lastPaintSfx=0;
+function paintAt(x,y){let n=0;paintCells.forEach(c=>{if(!c.done&&dist(c.x,c.y,x,y)<34){c.done=true;n++}});if(n){paintDone+=n;done=paintDone;if(Date.now()-lastPaintSfx>120){lastPaintSfx=Date.now();sfx('paint')}
+  if(paintDone>=paintTotal*0.85){if(LEVELS[levelIdx].name==='Spa Finale'){paintComplete=true}else levelComplete()}}}
+cv.addEventListener('pointerdown',e=>{e.preventDefault();audio();startMusic();if(screen!=='playing')return;const p=toLogical(e);pointer={x:p.x,y:p.y,down:true};dragging=true;const L=LEVELS[levelIdx];
+  if(L.mode==='paint'){
+    if(paintComplete&&L.name==='Spa Finale'){const it=items.find(it=>!it.done&&dist(it.x,it.y,p.x,p.y)<it.r+14);if(it){it.done=true;sfx('sparkle');if(items.every(i=>i.done))levelComplete()}return}
+    paintAt(p.x,p.y);return}
+  if(L.mode==='drag'){const it=items.find(it=>!it.done&&dist(it.x,it.y,p.x,p.y)<48);if(it){dragItem=it;sfx('swoosh')}return}
+  const it=items.find(it=>!it.done&&dist(it.x,it.y,p.x,p.y)<it.r+12);
+  if(!it)return;
+  if(L.mode==='order'){const next=items.filter(i=>!i.done).sort((a,b)=>a.n-b.n)[0];if(it!==next){mistakes++;shakeT=0.3;sfx('wrong');return}}
+  it.done=true;done++;sfx(it.kind==='star'?'sparkle':'pop');checkDone();
+});
+let lastMoveT=0;
+cv.addEventListener('pointermove',e=>{const now=Date.now();if(now-lastMoveT<16)return;lastMoveT=now;const p=toLogical(e);pointer={x:p.x,y:p.y,down:dragging};
+  if(screen!=='playing'||!dragging)return;const L=LEVELS[levelIdx];
+  if(L.mode==='paint'){paintAt(p.x,p.y);return}
+  if(L.mode==='clean'){items.forEach(it=>{if(!it.done&&dist(it.x,it.y,p.x,p.y)<it.r+10){it.done=true;done++;sfx('pop');checkDone()}});return}
+  if(L.mode==='drag'&&dragItem){dragItem.x=p.x;dragItem.y=p.y}
+});
+function endPointer(e){if(screen!=='playing')return;dragging=false;pointer.down=false;const L=LEVELS[levelIdx];
+  if(L.mode==='drag'&&dragItem){const it=dragItem;dragItem=null;
+    if(dist(it.x,it.y,it.tx,it.ty)<70){it.done=true;it.x=it.tx;it.y=it.ty;done++;sfx('place');checkDone()}
+    else{it.x=it.ox;it.y=it.oy;mistakes++;sfx('wrong')}
+  }
+}
+cv.addEventListener('pointerup',endPointer);cv.addEventListener('pointercancel',endPointer);
+
+/* ---------------- Drawing ---------------- */
+function drawFace(cx,cy,s,opts){opts=opts||{};ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);
+  // hair
+  ctx.fillStyle='#6b4a2f';ctx.beginPath();ctx.arc(0,-18,72,Math.PI,0);ctx.fill();circle(-58,10,20,'#6b4a2f');circle(58,10,20,'#6b4a2f');
+  // face
+  circle(0,0,62,'#ffd9b8','#e8b48f');
+  // eyes
+  circle(-24,-8,7,'#4a2c5a');circle(24,-8,7,'#4a2c5a');circle(-22,-10,2.5,'#fff');circle(26,-10,2.5,'#fff');
+  // cheeks, smile, lips
+  circle(-38,14,10,'rgba(255,143,179,.55)');circle(38,14,10,'rgba(255,143,179,.55)');
+  ctx.strokeStyle='#4a2c5a';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,14,18,0.15*Math.PI,0.85*Math.PI);ctx.stroke();
+  ctx.fillStyle=opts.lips||'#e56b8c';ctx.beginPath();ctx.ellipse(0,32,14,6,0,0,Math.PI*2);ctx.fill();
+  if(opts.mask){ctx.fillStyle='rgba(191,232,201,.85)';ctx.beginPath();ctx.ellipse(0,0,58,60,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff';circle(-24,-8,9,'#fff');circle(24,-8,9,'#fff');ctx.fillStyle='#4a2c5a';circle(-24,-8,4,'#4a2c5a');circle(24,-8,4,'#4a2c5a')}
+  ctx.restore()}
+function drawPet(cx,cy,s){ctx.save();ctx.translate(cx,cy);ctx.scale(s,s);
+  ctx.fillStyle='#e8b48f';ctx.beginPath();ctx.ellipse(0,55,78,48,0,0,Math.PI*2);ctx.fill(); // body
+  ctx.fillStyle='#d9a05b';circle(-62,-38,26,'#d9a05b');circle(62,-38,26,'#d9a05b'); // ears
+  circle(0,-20,58,'#ffd9b8','#e8b48f'); // head
+  circle(-22,-28,7,'#4a2c5a');circle(22,-28,7,'#4a2c5a');circle(-20,-30,2.5,'#fff');circle(24,-30,2.5,'#fff');
+  ctx.fillStyle='#c05a8a';ctx.beginPath();ctx.ellipse(0,-8,14,10,0,0,Math.PI*2);ctx.fill(); // nose
+  ctx.strokeStyle='#4a2c5a';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,2,16,0.15*Math.PI,0.85*Math.PI);ctx.stroke();
+  circle(-40,-2,9,'rgba(255,143,179,.55)');circle(40,-2,9,'rgba(255,143,179,.55)');
+  ctx.strokeStyle='#d9a05b';ctx.lineWidth=8;ctx.beginPath();ctx.arc(78,40,26,-1.2,1.2);ctx.stroke(); // tail
+  ctx.restore()}
+function drawRoom(){ // shelf + plant + bed props
+  ctx.fillStyle='#fff';rr(70,250,340,26,10);ctx.fill();ctx.fillStyle='#e8d5c0';rr(70,250,340,26,10);ctx.fill();
+  ctx.fillStyle='#c9a05b';rr(70,276,340,10,4);ctx.fill();
+  // plant pot
+  ctx.fillStyle='#e58bb0';rr(300,190,54,52,8);ctx.fill();ctx.fillStyle='#5aa86e';circle(327,175,26,'#5aa86e');circle(310,185,18,'#7cc98a');circle(344,185,18,'#7cc98a');
+  // books
+  ['#ff8fb3','#8fd8c8','#b678e0','#ffd9a0'].forEach((c,i)=>{ctx.fillStyle=c;rr(96+i*30,208,24,42,4);ctx.fill()});
+  // bed (for tuck-in)
+  if(LEVELS[levelIdx]&&LEVELS[levelIdx].name==='Tuck-In Time'){ctx.fillStyle='#b678e0';rr(90,420,300,90,16);ctx.fill();ctx.fillStyle='#fff';rr(100,430,280,60,12);ctx.fill()}
+}
+function drawNails(){for(let i=0;i<5;i++){const x=140+i*50;ctx.fillStyle='#ffd9b8';rr(x-18,250,36,120,18);ctx.fill();ctx.fillStyle='#fff';rr(x-13,236,26,34,12);ctx.fill();ctx.strokeStyle='#e8b48f';ctx.lineWidth=2;rr(x-13,236,26,34,12);ctx.stroke()}}
+function drawItem(it){ctx.save();
+  if(it.kind==='speck'){ctx.fillStyle='rgba(160,120,80,.75)';circle(it.x,it.y,it.r,'rgba(160,120,80,.75)');ctx.fillStyle='rgba(255,255,255,.5)';circle(it.x-6,it.y-6,5,'rgba(255,255,255,.5)')}
+  else if(it.kind==='dot'){circle(it.x,it.y,it.r,'rgba(255,255,255,.9)','#e58bb0');circle(it.x,it.y,it.r-8,'#ffe3ee');star(it.x,it.y,7,'#ff8fb3')}
+  else if(it.kind==='star'){circle(it.x,it.y,it.r,it.done?'#c8f0d8':'#fff3d6','#f5a623');star(it.x,it.y,16,it.done?'#7cc98a':'#f5a623');ctx.fillStyle='#4a2c5a';ctx.font='bold 20px Trebuchet MS';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(it.n,it.x,it.y+2)}
+  else if(it.kind==='sparkle'){star(it.x,it.y,18,'#f5d76e');star(it.x,it.y,9,'#fff')}
+  else if(it.kind==='drag'){ctx.fillStyle=it.color;rr(it.x-32,it.y-26,64,52,12);ctx.fill();ctx.strokeStyle='rgba(0,0,0,.15)';ctx.lineWidth=2;rr(it.x-32,it.y-26,64,52,12);ctx.stroke();ctx.fillStyle='#4a2c5a';ctx.font='bold 12px Trebuchet MS';ctx.textAlign='center';ctx.fillText(it.label,it.x,it.y+4);if(it.bin){ctx.fillStyle='#7a5578';ctx.font='11px Trebuchet MS';ctx.fillText('→ '+it.bin+' basket',it.x,it.y+40)}}
+  ctx.restore()}
+function drawDragTargets(){const L=LEVELS[levelIdx];if(L.mode!=='drag')return;const seen=new Set();items.forEach(it=>{if(it.done)return;const k=it.tx+','+it.ty;if(seen.has(k))return;seen.add(k);ctx.save();ctx.setLineDash([8,6]);ctx.strokeStyle='rgba(192,90,138,.8)';ctx.lineWidth=3;ctx.beginPath();ctx.arc(it.tx,it.ty,36,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);ctx.restore()});
+  if(L.name==='Sort the Drawer'){ctx.fillStyle='#ffb3c8';rr(90,480,120,80,14);ctx.fill();ctx.fillStyle='#8fd8c8';rr(270,480,120,80,14);ctx.fill();ctx.fillStyle='#4a2c5a';ctx.font='bold 15px Trebuchet MS';ctx.textAlign='center';ctx.fillText('Pink',150,522);ctx.fillText('Blue',330,522)}}
+function drawPaintOverlay(){if(!paintRect)return;const L=LEVELS[levelIdx];
+  ctx.save();ctx.fillStyle='rgba(255,255,255,.25)';rr(paintRect.x,paintRect.y,paintRect.w,paintRect.h,16);ctx.fill();
+  paintCells.forEach(c=>{if(c.done){ctx.fillStyle=L.theme[2];circle(c.x,c.y,11,L.theme[2])}});
+  ctx.strokeStyle='rgba(192,90,138,.7)';ctx.lineWidth=2;ctx.setLineDash([6,5]);rr(paintRect.x,paintRect.y,paintRect.w,paintRect.h,16);ctx.stroke();ctx.setLineDash([]);ctx.restore()}
+function drawTop(){const L=LEVELS[levelIdx];
+  ctx.fillStyle='rgba(255,255,255,.85)';rr(16,58,448,64,16);ctx.fill();
+  ctx.fillStyle='#4a2c5a';ctx.font='bold 19px Trebuchet MS';ctx.textAlign='left';ctx.fillText((levelIdx+1)+'. '+L.name,30,82);
+  ctx.font='13px Trebuchet MS';ctx.fillStyle='#7a5578';ctx.fillText(L.sub,30,104);
+  // progress
+  const pct=total?done/total:0;ctx.fillStyle='#ffe3ee';rr(16,132,448,14,7);ctx.fill();ctx.fillStyle='#5ec8c0';rr(16,132,448*pct,14,7);ctx.fill();
+  ctx.fillStyle='#4a2c5a';ctx.font='bold 13px Trebuchet MS';ctx.textAlign='right';ctx.fillText('★ '+totalStars+'   Score '+score,366,40);
+  ctx.textAlign='left';ctx.fillText('Level '+(levelIdx+1)+' / 20',60,40);
+  if(shakeT>0){ctx.fillStyle='#c05a8a';ctx.font='bold 15px Trebuchet MS';ctx.textAlign='center';ctx.fillText('Oops — try the next number!',240,170)}}
+function drawScene(){const L=LEVELS[levelIdx];
+  if(L.scene==='face')drawFace(240,340,1.05,{mask:L.name==='Sheet Mask'&&items.some(i=>i.done),lips:L.name==='Lip Care'?'#e56b8c':undefined});
+  else if(L.scene==='pet'){if(L.name==='Puppy Bath Bubbles'){ctx.fillStyle='#bdeef2';rr(90,430,300,110,40);ctx.fill();ctx.fillStyle='#8fd8f0';rr(90,430,300,40,20);ctx.fill()}drawPet(240,360,1)}
+  else if(L.scene==='nails')drawNails();
+  else drawRoom();
+  if(L.name==='Tuck-In Time')drawRoom();
+}
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  const t=Date.now()/1000;
+  if(screen==='menu'){
+    ctx.fillStyle=bgGrad('menu','#ffe3ee','#e3f6ff');ctx.fillRect(0,0,W,H);
+    drawFace(240,260,1.15);drawPet(92,645,0.55);drawPet(388,645,0.55);
+    star(90,120,18,'#f5d76e');star(400,150,14,'#f5d76e');
+    ctx.fillStyle='#c05a8a';ctx.font='bold 44px Trebuchet MS';ctx.textAlign='center';ctx.fillText('Pamper Time',240,430);
+    ctx.fillStyle='#7a5578';ctx.font='bold 22px Trebuchet MS';ctx.fillText('Relaxing Minis',240,464);
+    ctx.font='15px Trebuchet MS';ctx.fillText('20 gentle minis • no timer • no losing',240,496);
+    ctx.fillText('Skincare • Make-up • Tidying • Pet care',240,520);
+    ctx.fillStyle='#f5a623';ctx.font='bold 16px Trebuchet MS';ctx.fillText('★ '+totalStars+' stars earned   •   '+unlocked+' / 20 unlocked',240,545);
+    return}
+  if(screen==='win'){
+    ctx.fillStyle=bgGrad('win','#fff3d6','#ffe3ee');ctx.fillRect(0,0,W,H);
+    for(let i=0;i<12;i++){const a=i/12*Math.PI*2;star(240+Math.cos(a+t*0.3)*150,320+Math.sin(a+t*0.3)*90,12,'#f5d76e')}
+    drawFace(240,320,1.1);drawPet(105,600,0.55);
+    ctx.fillStyle='#c05a8a';ctx.font='bold 38px Trebuchet MS';ctx.textAlign='center';ctx.fillText('You did it!',240,165);
+    ctx.fillStyle='#7a5578';ctx.font='20px Trebuchet MS';ctx.fillText('All 20 minis complete',240,195);
+    ctx.fillStyle='#f5a623';ctx.font='bold 24px Trebuchet MS';ctx.fillText('★ '+totalStars+' / 60 stars',240,470);
+    ctx.fillStyle='#4a2c5a';ctx.font='18px Trebuchet MS';ctx.fillText('Final score: '+score,240,500);
+    return}
+  if(screen==='clear'){
+    ctx.fillStyle=bgGrad('clear','#eafaf5','#ffe3ee');ctx.fillRect(0,0,W,H);
+    drawFace(240,300,1.05);
+    ctx.fillStyle='#c05a8a';ctx.font='bold 34px Trebuchet MS';ctx.textAlign='center';ctx.fillText('Mini Complete!',240,180);
+    for(let i=0;i<3;i++)star(180+i*60,260,26,i<clearStars?'#f5a623':'#ddd');
+    ctx.fillStyle='#4a2c5a';ctx.font='18px Trebuchet MS';ctx.fillText(LEVELS[levelIdx].name+' — '+clearStars+' star'+(clearStars>1?'s':''),240,470);
+    ctx.fillText('Score: '+score+'   •   Total stars: '+totalStars,240,500);
+    ctx.fillStyle='#7a5578';ctx.font='15px Trebuchet MS';ctx.fillText(mistakes===0?'Perfect — not a single wobble!':mistakes<=2?'Lovely and calm.':'Finished at your own pace. Well done!',240,530);
+    return}
+  if(screen==='paused'){
+    ctx.fillStyle='rgba(43,31,61,.75)';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#fff';ctx.font='bold 36px Trebuchet MS';ctx.textAlign='center';ctx.fillText('Paused',240,330);
+    ctx.font='17px Trebuchet MS';ctx.fillText('Take a breath. Your progress is saved.',240,365);return}
+  // playing
+  const L=LEVELS[levelIdx];
+  ctx.fillStyle=bgGrad('lv'+levelIdx,L.theme[0],L.theme[1]);ctx.fillRect(0,0,W,H);
+  ctx.save();if(shakeT>0)ctx.translate((Math.random()-0.5)*8,0);
+  drawScene();
+  if(L.mode==='paint')drawPaintOverlay();
+  drawDragTargets();
+  items.forEach(it=>{if(!it.done)drawItem(it)});
+  // sparkles on finished paint area
+  if(L.mode==='paint'&&paintDone>=paintTotal*0.85){for(let i=0;i<5;i++)star(150+i*45,200+Math.sin(t*2+i)*6,10,'#f5d76e')}
+  ctx.restore();drawTop();
+  if(L.mode==='drag'&&dragItem){ctx.fillStyle='rgba(255,255,255,.7)';circle(dragItem.tx,dragItem.ty,50,'rgba(255,255,255,.35)')}
+}
+let lastDraw=0,bgCache={};
+function bgGrad(key,c1,c2){if(bgCache.key!==key){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,c1);g.addColorStop(1,c2);bgCache={key,g}}return bgCache.g}
+function loop(ts){requestAnimationFrame(loop);if(ts-lastDraw<120)return;lastDraw=ts;if(shakeT>0)shakeT-=0.12;draw()}
+
+/* ---------------- Buttons / screens ---------------- */
+function show(ids){['btn-start','btn-how','btn-levels-open','btn-next','btn-replay','btn-again','btn-win-home','btn-resume','btn-pause-home','btn-pause','btn-home'].forEach(id=>$(id).classList.add('hidden'));ids.forEach(id=>$(id).classList.remove('hidden'))}
+function updateButtons(){
+  $('btn-mute').textContent=muted?'✕':'♪';
+  if(screen==='menu')show(['btn-start','btn-how','btn-levels-open']);
+  else if(screen==='playing')show(['btn-pause','btn-home']);
+  else if(screen==='clear')show(levelIdx<19?['btn-next','btn-replay']:['btn-again','btn-replay']);
+  else if(screen==='win')show(['btn-again','btn-win-home']);
+  else if(screen==='paused')show(['btn-resume','btn-pause-home']);
+  else show([]);
+  $('howto').classList.toggle('hidden',!$('howto').dataset.open);
+}
+function startLevel(i){setupLevel(i);screen='playing';updateButtons()}
+function openLevels(){screen='levels';const grid=$('levels-grid');grid.innerHTML='';LEVELS.forEach((L,i)=>{const d=document.createElement('button');d.className='lv'+(i+1>unlocked?' locked':'')+((starsByLevel[i+1]||0)>0?' done':'');d.innerHTML='<div class="n">'+(i+1)+'</div><div class="t">'+L.name+'</div><div class="s">'+'★'.repeat(starsByLevel[i+1]||0)+'</div>';d.onclick=()=>{if(i+1>unlocked)return;$('levels').classList.add('hidden');startLevel(i)};grid.appendChild(d)});$('levels').classList.remove('hidden');updateButtons()}
+$('btn-start').onclick=()=>{audio();startMusic();startLevel(0)};
+$('btn-how').onclick=()=>{$('howto').dataset.open='1';$('howto').classList.remove('hidden')};
+$('btn-how-close').onclick=()=>{delete $('howto').dataset.open;$('howto').classList.add('hidden')};
+$('btn-levels-open').onclick=openLevels;
+$('btn-levels-close').onclick=()=>{$('levels').classList.add('hidden');screen='menu';updateButtons()};
+$('btn-next').onclick=()=>{if(levelIdx<19)startLevel(levelIdx+1)};
+$('btn-replay').onclick=()=>startLevel(levelIdx);
+$('btn-again').onclick=()=>{score=0;startLevel(0)};
+$('btn-win-home').onclick=()=>{screen='menu';updateButtons()};
+$('btn-pause').onclick=()=>{if(screen==='playing'){screen='paused';updateButtons()}};
+$('btn-resume').onclick=()=>{screen='playing';updateButtons()};
+$('btn-pause-home').onclick=()=>{screen='menu';updateButtons()};
+$('btn-home').onclick=()=>{screen='menu';updateButtons()};
+$('btn-mute').onclick=()=>{muted=!muted;if(muted)stopMusic();else startMusic();updateButtons()};
+
+/* Test hook: exposes state + actionable targets in canvas % coordinates. */
+window.__pamper=function(){
+  const L=LEVELS[levelIdx];
+  const pct=it=>({x:it.x/W*100,y:it.y/H*100});
+  let targets=[];
+  if(screen==='playing'){
+    if(L.mode==='paint'){targets=paintCells.filter(c=>!c.done).slice(0,60).map(pct);if(paintDone>=paintTotal*0.85&&L.name==='Spa Finale')targets=items.filter(i=>!i.done).map(pct)}
+    else if(L.mode==='drag')targets=items.filter(i=>!i.done).map(it=>({x:it.x/W*100,y:it.y/H*100,tx:it.tx/W*100,ty:it.ty/H*100,label:it.label}));
+    else if(L.mode==='order')targets=items.filter(i=>!i.done).sort((a,b)=>a.n-b.n).map(pct);
+    else targets=items.filter(i=>!i.done).map(pct);
+  }
+  return{screen,level:levelIdx+1,levelName:L.name,mode:L.mode,done,total,mistakes,stars:clearStars,score,totalStars,unlocked,muted,paintDone,paintTotal,paintRect:paintRect?{x:paintRect.x/W*100,y:paintRect.y/H*100,w:paintRect.w/W*100,h:paintRect.h/H*100}:null,targets,nextTarget:targets[0]||null};
+};
+screen='menu';updateButtons();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
